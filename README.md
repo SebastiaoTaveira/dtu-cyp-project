@@ -130,3 +130,4 @@ Every model goes through the same training loop, metrics and test evaluation, so
 - Two molecules (`OCNT-0453746`, `OCNT-0453782`) are excluded because their SMILES have impossible stereochemistry, so no 3D conformer exists. Both only have a negative CYP3A4 TDI label.
 - Atom-JEPA runs in fp32 by default, because V100 GPUs do not support bf16 natively. On L40s or A100s, `model.precision=bf16` is faster.
 
+
