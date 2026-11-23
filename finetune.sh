@@ -37,3 +37,4 @@ for f in train val test; do
 done
 # Results go to runs/<task>/<model>/<timestamp>/ (set in conf/config.yaml).
 python -u finetune.py model="$MODEL" task="$TASK" seed=42 device=cuda $OVERRIDES
+python log_results.py

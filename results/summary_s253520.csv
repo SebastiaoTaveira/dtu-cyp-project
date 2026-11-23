@@ -1,0 +1,8 @@
+timestamp,task,model,who,overrides,val_macro_ST-RAE,val_macro_MCC,test_macro_ST-RAE,test_macro_MCC,notes
+2026-11-22_19-57-15,classification,morgan_mlp,s253520,model=morgan_mlp task=classification seed=42 device=cpu,,0.2093,,0.0671,
+2026-11-22_19-59-24,classification,rdkit_mlp,s253520,model=rdkit_mlp task=classification seed=42 device=cpu,,0.2362,,0.2418,
+2026-11-21_12-38-24,regression,atom_jepa,s253520,model=atom_jepa task=regression seed=42 device=cuda,0.688,,0.7714,,
+2026-11-21_12-42-26,regression,morgan_rdkit_lgbm,s253520,model=morgan_rdkit_lgbm task=regression seed=42 device=cpu,0.7396,,0.7826,,
+2026-11-22_19-56-06,regression,morgan_mlp,s253520,model=morgan_mlp task=regression seed=42 device=cpu,0.8414,,0.8574,,
+2026-11-22_19-58-25,regression,rdkit_mlp,s253520,model=rdkit_mlp task=regression seed=42 device=cpu,0.7276,,0.7672,,
+2026-11-22_20-00-33,regression,morgan_rdkit_mlp,s253520,model=morgan_rdkit_mlp task=regression seed=42 device=cpu,0.7372,,0.7637,,
