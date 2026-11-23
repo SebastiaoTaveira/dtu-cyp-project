@@ -1,8 +1,9 @@
-timestamp,task,model,who,overrides,val_macro_ST-RAE,val_macro_MCC,test_macro_ST-RAE,test_macro_MCC,notes
-2026-11-22_19-57-15,classification,morgan_mlp,s253520,model=morgan_mlp task=classification seed=42 device=cpu,,0.2093,,0.0671,
-2026-11-22_19-59-24,classification,rdkit_mlp,s253520,model=rdkit_mlp task=classification seed=42 device=cpu,,0.2362,,0.2418,
-2026-11-21_12-38-24,regression,atom_jepa,s253520,model=atom_jepa task=regression seed=42 device=cuda,0.688,,0.7714,,
-2026-11-21_12-42-26,regression,morgan_rdkit_lgbm,s253520,model=morgan_rdkit_lgbm task=regression seed=42 device=cpu,0.7396,,0.7826,,
-2026-11-22_19-56-06,regression,morgan_mlp,s253520,model=morgan_mlp task=regression seed=42 device=cpu,0.8414,,0.8574,,
-2026-11-22_19-58-25,regression,rdkit_mlp,s253520,model=rdkit_mlp task=regression seed=42 device=cpu,0.7276,,0.7672,,
-2026-11-22_20-00-33,regression,morgan_rdkit_mlp,s253520,model=morgan_rdkit_mlp task=regression seed=42 device=cpu,0.7372,,0.7637,,
+timestamp,task,model,who,hparams,overrides,val_macro_ST-RAE,val_macro_MCC,test_macro_ST-RAE,test_macro_MCC,notes
+2026-11-22_19-57-15,classification,morgan_mlp,s253520,lr=0.001 head=mlp hidden=512 layers=3 drop=0.1 bs=64 wd=0.01 epochs=100,model=morgan_mlp task=classification seed=42 device=cpu,,0.2093,,0.0671,
+2026-11-22_19-59-24,classification,rdkit_mlp,s253520,lr=0.001 head=mlp hidden=512 layers=3 drop=0.1 bs=64 wd=0.01 epochs=100,model=rdkit_mlp task=classification seed=42 device=cpu,,0.2362,,0.2418,
+2026-11-23_15-52-46,classification,atom_jepa,s253520,enc_lr=1e-05 freeze=False lr=0.001 prec=fp32 head=mlp hidden=512 layers=3 drop=0.1 bs=8 wd=0.0001 epochs=20,model=atom_jepa task=classification seed=42 device=cuda,,0.2786,,0.1681,
+2026-11-21_12-38-24,regression,atom_jepa,s253520,enc_lr=1e-05 freeze=False lr=0.001 prec=fp32 head=mlp hidden=512 layers=3 drop=0.1 bs=8 wd=0.0001 epochs=20,model=atom_jepa task=regression seed=42 device=cuda,0.688,,0.7714,,
+2026-11-21_12-42-26,regression,morgan_rdkit_lgbm,s253520,gbm_lr=0.03 leaves=31 min_child=20 lambda=1.0 sub=0.8 col=0.3 n_est=5000,model=morgan_rdkit_lgbm task=regression seed=42 device=cpu,0.7396,,0.7826,,
+2026-11-22_19-56-06,regression,morgan_mlp,s253520,lr=0.001 head=mlp hidden=512 layers=3 drop=0.1 bs=64 wd=0.01 epochs=100,model=morgan_mlp task=regression seed=42 device=cpu,0.8414,,0.8574,,
+2026-11-22_19-58-25,regression,rdkit_mlp,s253520,lr=0.001 head=mlp hidden=512 layers=3 drop=0.1 bs=64 wd=0.01 epochs=100,model=rdkit_mlp task=regression seed=42 device=cpu,0.7276,,0.7672,,
+2026-11-22_20-00-33,regression,morgan_rdkit_mlp,s253520,lr=0.001 head=mlp hidden=512 layers=3 drop=0.1 bs=64 wd=0.01 epochs=100,model=morgan_rdkit_mlp task=regression seed=42 device=cpu,0.7372,,0.7637,,

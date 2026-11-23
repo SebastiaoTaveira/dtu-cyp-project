@@ -1,33 +1,63 @@
 #!/usr/bin/env python
 """Collect this user's runs into results/.
 
-  results/experiments_<user>.csv   every metric, for the record
-  results/summary_<user>.csv       the columns you actually compare
+  results/experiments_<user>.csv   every metric + every config key
+  results/summary_<user>.csv       readable: metrics + a hyperparameter string
 
-Per-user filenames so teammates never overwrite each other.
-Select configurations on val_*. test_* is for the final table only.
+Select on val_*. test_* is for the final table only.
 
-    python log_results.py            update your files
-    python log_results.py --table    also print a ranking of everyone's runs
+    python log_results.py            update
+    python log_results.py --table    also print the ranking
     python log_results.py --push     also commit and push
 """
 import csv, glob, json, os, subprocess, sys
+import yaml
 
 USER = os.environ.get("USER", "unknown")
 FULL = f"results/experiments_{USER}.csv"
 SUMMARY = f"results/summary_{USER}.csv"
-KEEP = ["timestamp", "task", "model", "who", "overrides",
+KEEP = ["timestamp", "task", "model", "who", "hparams", "overrides",
         "val_macro_ST-RAE", "val_macro_MCC",
         "test_macro_ST-RAE", "test_macro_MCC", "notes"]
 
 
-def flat(prefix, obj, out):
-    """Turn nested metric dicts into flat prefixed columns."""
+def flat(prefix, obj, out, sep="_"):
     if isinstance(obj, dict):
         for k, v in obj.items():
-            flat(f"{prefix}_{k}", v, out)
+            flat(f"{prefix}{sep}{k}", v, out, sep)
     else:
         out[prefix] = obj
+
+
+def hparams(cfg):
+    """One readable string of the knobs that matter, per model type."""
+    m = cfg.get("model") or {}
+    r = cfg.get("readout") or {}
+    t = cfg.get("train") or {}
+    bits = []
+    for key, label in (("encoder_lr", "enc_lr"),
+                       ("freeze_encoder", "freeze"),
+                       ("readout_lr", "lr"),
+                       ("precision", "prec")):
+        if key in m:
+            bits.append(f"{label}={m[key]}")
+    for key, label in (("learning_rate", "gbm_lr"), ("num_leaves", "leaves"),
+                       ("min_child_samples", "min_child"), ("reg_lambda", "lambda"),
+                       ("subsample", "sub"), ("colsample_bytree", "col"),
+                       ("n_estimators", "n_est")):
+        p = m.get("params") or {}
+        if key in p:
+            bits.append(f"{label}={p[key]}")
+    if m.get("type") != "lightgbm":
+        for key, label in (("type", "head"), ("hidden_dim", "hidden"),
+                           ("num_layers", "layers"), ("dropout", "drop")):
+            if key in r:
+                bits.append(f"{label}={r[key]}")
+    for key, label in (("batch_size", "bs"), ("weight_decay", "wd"),
+                       ("epochs", "epochs")):
+        if key in t:
+            bits.append(f"{label}={t[key]}")
+    return " ".join(str(b) for b in bits)
 
 
 def rnd(v, n=4):
@@ -52,8 +82,7 @@ def collect():
         row = {"timestamp": parts[-1],
                "task": parts[1] if len(parts) > 1 else "",
                "model": parts[2] if len(parts) > 2 else "",
-               "run_dir": run_dir,
-               "who": USER,
+               "run_dir": run_dir, "who": USER,
                "notes": notes.get(run_dir, "")}
 
         for fname, prefix in (("validation_metrics.json", "val"),
@@ -66,6 +95,16 @@ def collect():
                 except Exception as e:
                     row[prefix + "_error"] = str(e)
 
+        cfg_path = os.path.join(run_dir, ".hydra", "config.yaml")
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as f:
+                    cfg = yaml.safe_load(f) or {}
+                row["hparams"] = hparams(cfg)
+                flat("cfg", cfg, row, sep=".")
+            except Exception as e:
+                row["cfg_error"] = str(e)
+
         ov = os.path.join(run_dir, ".hydra", "overrides.yaml")
         if os.path.exists(ov):
             with open(ov) as f:
@@ -77,7 +116,7 @@ def collect():
 
 def write(rows):
     os.makedirs("results", exist_ok=True)
-    front = ["timestamp", "task", "model", "who", "notes", "overrides"]
+    front = ["timestamp", "task", "model", "who", "hparams", "notes", "overrides"]
     fields = front + sorted({k for r in rows for k in r} - set(front))
     with open(FULL, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
@@ -89,26 +128,23 @@ def write(rows):
         for r in sorted(rows, key=lambda r: (r.get("task", ""), r.get("timestamp", ""))):
             w.writerow({k: rnd(r.get(k, "")) for k in KEEP})
 
-    print(f"{FULL}: {len(rows)} runs")
+    print(f"{FULL}: {len(rows)} runs, {len(fields)} columns")
     print(f"{SUMMARY}: {len(KEEP)} columns")
 
 
 def table():
-    """Rank every summary file in results/ — yours and your teammates'."""
     rows = []
     for path in sorted(glob.glob("results/summary_*.csv")):
         with open(path) as f:
             rows += list(csv.DictReader(f))
-
     for task, metric, better in (("regression", "val_macro_ST-RAE", "lower"),
                                  ("classification", "val_macro_MCC", "higher")):
         sel = [r for r in rows if r.get("task") == task and r.get(metric)]
         sel.sort(key=lambda r: float(r[metric]), reverse=(better == "higher"))
         print(f"\n{task}  ({metric}, {better} is better)")
-        print(f"  {'model':<20} {'score':>8}  {'who':<9} overrides")
         for r in sel:
-            print(f"  {r['model'][:20]:<20} {float(r[metric]):8.4f}  "
-                  f"{r.get('who', '')[:9]:<9} {r.get('overrides', '')[:70]}")
+            print(f"  {r['model'][:18]:<18} {float(r[metric]):7.4f}  "
+                  f"{r.get('hparams', '')[:90]}")
         if not sel:
             print("  (nothing yet)")
 

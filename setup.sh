@@ -5,4 +5,4 @@ echo "Ready: $(which python)"
 run () {
   python finetune.py "$@" && python log_results.py
 }
-EOF
+
