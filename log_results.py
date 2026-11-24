@@ -16,10 +16,10 @@ import yaml
 USER = os.environ.get("USER", "unknown")
 FULL = f"results/experiments_{USER}.csv"
 SUMMARY = f"results/summary_{USER}.csv"
-KEEP = ["timestamp", "task", "model", "who", "hparams", "overrides",
+KEEP = ["timestamp", "task", "model",
         "val_macro_ST-RAE", "val_macro_MCC",
-        "test_macro_ST-RAE", "test_macro_MCC", "notes"]
-
+        "test_macro_ST-RAE", "test_macro_MCC",
+        "hparams", "overrides", "notes", "who"]
 
 def flat(prefix, obj, out, sep="_"):
     if isinstance(obj, dict):

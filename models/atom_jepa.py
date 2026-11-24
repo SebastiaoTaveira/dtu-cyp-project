@@ -55,5 +55,11 @@ class AtomJEPAModel(nn.Module):
             groups.append({'params': list(self.encoder.parameters()), 'lr': self.cfg.encoder_lr})
         return groups
 
+    # two phase freezing: first freeze encoder, then unfreeze it for fine-tuning
+    def unfreeze_encoder(self):
+        self.cfg.freeze_encoder = False
+        self.encoder.requires_grad_(True)
+        self.encoder.set_grad_checkpointing(True) 
+
     def forward(self, batch):
         return self.readout(self.encoder(batch))  # Differentiable forward; do NOT use encoder.embed().

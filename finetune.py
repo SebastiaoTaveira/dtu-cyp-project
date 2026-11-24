@@ -97,7 +97,17 @@ def train_torch(cfg, train, val, targets, task, data, out):
     val_loader = model.loader(val, targets, batch_size)
     optimizer = torch.optim.AdamW(model.param_groups(), weight_decay=cfg.train.weight_decay)
     best = float('inf')
+    #two phase freezing: unfreeze at which epoch
+    unfreeze_at = cfg.model.get("unfreeze_at_epoch", 0)
     for epoch in range(1, cfg.train.epochs + 1):
+        
+        #two pahse freezing
+        if unfreeze_at > 0 and epoch == unfreeze_at:
+            model.unfreeze_encoder()
+            optimizer.add_param_group({"params": model.encoder.parameters(),
+                                       "lr": cfg.model.encoder_lr})
+            print(f"Unfroze encoder at epoch {epoch}")
+
         model.train()
         loss_sum, observed = 0., 0
         for batch in train_loader:
