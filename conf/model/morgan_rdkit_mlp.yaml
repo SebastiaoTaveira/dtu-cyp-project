@@ -16,7 +16,7 @@ model:
   feature_workers: 4
 
 train:
-  epochs: 30
+  epochs: 100
   batch_size: 64
   weight_decay: 1.0e-2
   grad_clip: 10.0
