@@ -11,6 +11,21 @@ class Conformers(Dataset):
     def __init__(self, frame, folder, targets):
         self.frame, self.folder = frame.reset_index(drop=True), folder
         self.y = frame.reindex(columns=targets).to_numpy(dtype=np.float32)
+        #how precise each measurement was, as reported by the scientists
+        sigma = frame.reindex(columns=[t + '_std' for t in targets]).to_numpy(dtype=np.float32)
+        for j in range(sigma.shape[1]):
+            column = sigma[:, j]
+            seen = column[np.isfinite(column)]
+            if seen.size == 0:
+                sigma[:, j] = 1.0
+                continue
+            #clip to the 10th-90th percentile so a few very precise values cannot dominateand and overfit. 
+            #Give molecules with no reported uncertainty the typical weight
+            low, high = np.percentile(seen, 10), np.percentile(seen, 90)
+            sigma[:, j] = np.where(np.isfinite(column), np.clip(column, low, high), np.median(seen))
+        self.weight = (1.0 / sigma ** 2).astype(np.float32)
+        print('uncertainty columns found:', int(np.isfinite(
+            frame.reindex(columns=[t + '_std' for t in targets]).to_numpy(dtype=np.float32)).sum()))
 
     def __len__(self):
         return len(self.frame)
@@ -19,7 +34,8 @@ class Conformers(Dataset):
         with np.load(self.folder / f'{self.frame.iloc[i].key}.npz') as d:
             return {'atomic_numbers': torch.tensor(d['z'], dtype=torch.long),
                     'node_coordinates': torch.tensor(d['pos'], dtype=torch.float32),
-                    'y': torch.tensor(self.y[i])}
+                    'y': torch.tensor(self.y[i]),
+                    'weight': torch.tensor(self.weight[i])}
 
 
 class AtomJEPAModel(nn.Module):
@@ -45,9 +61,16 @@ class AtomJEPAModel(nn.Module):
     def fit_preprocessing(self, train):
         pass
 
+    #we take out the weights for the encodar not to see them and then we give them back
     def loader(self, frame, targets, batch_size, shuffle=False):
+        def collate(samples):
+            weight = torch.stack([s.pop('weight') for s in samples])
+            batch = self.encoder.collate(samples)
+            batch['weight'] = weight
+            return batch
+
         return DataLoader(Conformers(frame, self.folder, targets), batch_size=batch_size,
-                          shuffle=shuffle, collate_fn=self.encoder.collate, num_workers=0)
+                          shuffle=shuffle, collate_fn=collate, num_workers=0)
 
     def param_groups(self):
         groups = [{'params': list(self.readout.parameters()), 'lr': self.cfg.readout_lr}]

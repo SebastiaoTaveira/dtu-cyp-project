@@ -21,15 +21,19 @@ from models.gbm import LightGBMModel
 from prepare_data import REG, CLS
 
 
-def masked_loss(pred, y, task, mean, std):
+def masked_loss(pred, y, task, mean, std, weight=None):
     mask = torch.isfinite(y)
     if not mask.any():
         return None
-    # Index BEFORE applying the loss: multiplying NaN losses by zero is not safe.
-    if task == 'regression':
-        return nn.functional.mse_loss(pred[mask], ((y - mean) / std)[mask])
-    return nn.functional.binary_cross_entropy_with_logits(pred[mask], y[mask])
-
+    if task == 'classification':
+        return nn.functional.binary_cross_entropy_with_logits(pred[mask], y[mask])
+    #index first, missing labels are NaN
+    error = (pred[mask] - ((y - mean) / std)[mask]) ** 2
+    if weight is None:
+        return error.mean()
+    #molecules with higher confidence count more
+    w = weight[mask]
+    return (w * error).sum() / w.sum()
 
 def metrics(frame, predictions, targets, task):
     result = {}
@@ -70,6 +74,8 @@ def predict(model, loader, task, mean, std):
     model.eval()
     out = []
     for batch in loader:
+        #the model does not expect a weight key
+        batch.pop('weight', None)
         p = model(batch)
         p = p * std + mean if task == 'regression' else p.sigmoid()
         out.append(p.float().cpu().numpy())
@@ -111,8 +117,15 @@ def train_torch(cfg, train, val, targets, task, data, out):
         model.train()
         loss_sum, observed = 0., 0
         for batch in train_loader:
+
             y = batch['y'].to(model.device)
-            loss = masked_loss(model(batch).float(), y, task, mean, std)
+            #the weights ride along in the batch, so we take the out before the model sees it
+            weight = batch.pop('weight', None)
+            if weight is not None and cfg.model.get('weighted_loss', False):
+                weight = weight.to(model.device)
+            else:
+                weight = None
+            loss = masked_loss(model(batch).float(), y, task, mean, std, weight)
             if loss is None:
                 continue
             if not torch.isfinite(loss):
