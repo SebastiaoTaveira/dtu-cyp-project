@@ -1,0 +1,25 @@
+# @package _global_
+# Pretrained CheMeleon D-MPNN encoder + readout head, fine-tuned end to end.
+# Checkpoint: chemeleon_mp.pt, Zenodo record 15460715 (8.7M params, 2048-dim embedding).
+defaults:
+  - override /readout: mlp
+
+model:
+  name: chemeleon
+  type: chemeleon
+  checkpoint: checkpoints/chemeleon_mp.pt
+  smiles_col: SMILES
+  freeze_encoder: false     # true trains only the readout head
+  unfreeze_at_epoch: 0      # >0 with freeze_encoder=true gives two-phase freezing
+  encoder_lr: 1.0e-4
+  readout_lr: 1.0e-3
+
+readout:
+  hidden_dim: 256           # the embedding is 2048 wide; 512x3 would be ~1.3M params
+  num_layers: 2
+
+train:
+  epochs: 30
+  batch_size: 64            # no 3D activations to hold, unlike Atom-JEPA's 8
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
